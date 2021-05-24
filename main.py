@@ -1,12 +1,9 @@
-from datetime import datetime, time, timedelta
-from typing import Optional
 from fastapi import FastAPI, Depends, HTTPException, status
-from pydantic import BaseModel
 from fastapi.openapi.utils import get_openapi
 from fastapi.openapi.docs import get_swagger_ui_html, get_redoc_html
 from models.mailModel import SchemaSend
 from utils.mailCore import Email
-import os
+from utils.dates import getDtNow
 import uuid
 from config import settings
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
@@ -34,6 +31,11 @@ def get_current_username(credentials: HTTPBasicCredentials = Depends(security)):
 @app.get("/")
 def read_root():
     return {"Hello": "World"}
+
+@app.get("/healthcheck")
+def health_check():
+    return {"date": str(getDtNow()),
+            "id": uuid.uuid4()}
 
 def sendMail(name=None, sender=None, subject=None, emailType=None, sendTo=None, emailContent=None):
         email=Email()
