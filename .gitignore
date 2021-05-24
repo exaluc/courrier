@@ -138,3 +138,10 @@ dmypy.json
 cython_debug/
 
 venv
+
+# Ignore dynaconf secret files
+.secrets.*
+
+*.pem
+*.cert
+*.key

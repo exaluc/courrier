@@ -1,4 +1,4 @@
-import sys
+import dkim
 import os
 import smtplib
 import mimetypes
@@ -10,6 +10,7 @@ from email.mime.image import MIMEImage
 from email.mime.audio import MIMEAudio
 from email.mime.text import MIMEText
 from email.header import Header
+from email.utils import formataddr, formatdate
 from email import encoders
 
 class Email():
@@ -18,15 +19,18 @@ class Email():
         self.setEmailType()
         self.setCharset()
         self.serverFromAddr=None
+        self.serverFromName=None
         self.serverToAddrs=[]
         self.toAddr=[]
         self.ccAddr=[]
         self.bccAddr=[]
         self.attachmentList=[]
         self.attachmentNum=0
+        self.dkimPrivateKeyPath=None
+        self.dkimSelector='dkim'
 
 
-    def setServer(self,server,port,smtpUser=None,smtpPass=None,timeOut=600,tryTime=3):
+    def setServer(self,server='localhost',port=25,smtpUser=None,smtpPass=None,timeOut=600,tryTime=3):
         self.smtpServer=server
         self.smtpPort=port
         self.smtpUser=smtpUser
@@ -51,7 +55,13 @@ class Email():
     
     def setServerFromAddr(self,fromAddr):
         self.serverFromAddr=fromAddr
-    
+        
+    def setDkimPrivateKeyPath(self, dkimKeyPath):
+        self.dkimPrivateKeyPath=dkimKeyPath
+        
+    def setServerFromName(self,fromName):
+        self.serverFromName=fromName    
+        
     def addToAddr(self,toAddr):
         self.toAddr.append(toAddr)
         self.serverToAddrs.append(toAddr)
@@ -104,12 +114,30 @@ class Email():
                 self.msg.attach(attachment)
 
         self.msg['Subject'] = Header(self.subject,self.charset)
-        self.msg['From'] = self.serverFromAddr
+        self.msg['From'] = formataddr((self.serverFromName, self.serverFromAddr))
         self.msg['To'] = ",".join(self.toAddr)
         if self.ccAddr:
             self.msg['cc'] = ",".join(self.ccAddr)
         if self.bccAddr:
             self.msg['bcc'] = ",".join(self.bccAddr)
+        sender_domain = self.serverFromAddr.split("@")[-1]
+        if self.dkimPrivateKeyPath and self.dkimSelector:
+            # the dkim library uses regex on byte strings so everything
+            # needs to be encoded from strings to bytes.
+            with open(self.dkimPrivateKeyPath) as fh:
+                dkim_private_key = fh.read()
+            headers = [b"From", b"To", b"Reply-To", b"Subject"]
+            sig = dkim.sign(
+                message=self.msg.as_bytes(),
+                selector=str(self.dkimSelector).encode(),
+                domain=sender_domain.encode(),
+                privkey=dkim_private_key.encode(),
+                include_headers=headers,
+            )
+            # add the dkim signature to the email message headers.
+            # decode the signature back to string_type because later on
+            # the call to msg.as_string() performs it's own bytes encoding...
+            self.msg["DKIM-Signature"] = sig[len("DKIM-Signature: "):].decode()
 
         #send
         for a in range(self.tryTime):
