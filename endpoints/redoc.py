@@ -8,6 +8,6 @@ router = APIRouter()
 def overridden_redoc():
 	return get_redoc_html(
      openapi_url="/openapi.json", 
-     title="ReDoc",
+     title=f"{settings.title} - ReDoc",
      redoc_favicon_url=""
      )

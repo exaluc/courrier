@@ -8,6 +8,6 @@ router = APIRouter()
 def overridden_swagger():
 	return get_swagger_ui_html(
      openapi_url="/openapi.json", 
-     title="Swagger UI",
+     title=f"{settings.title} - Swagger UI",
      swagger_favicon_url=""
      )
