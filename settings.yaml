@@ -1,3 +1,6 @@
+title: Courrier
+description: Custom email api
+version: 1.0.0
 debug: true
 server: localhost
 port: 25
